@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Šķidruma balansa kalkulators</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #d1d5db;
+      --accent: #2563eb;
+      --good: #047857;
+      --warn: #b45309;
+      --bad: #b91c1c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+      padding: 18px;
+    }
+
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 26px;
+      margin: 0 0 8px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    @media (max-width: 760px) {
+      .grid { grid-template-columns: 1fr; }
+      body { padding: 12px; }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+
+    input {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      font-size: 17px;
+    }
+
+    input:focus {
+      outline: 2px solid rgba(37, 99, 235, 0.25);
+      border-color: var(--accent);
+    }
+
+    .result {
+      margin-top: 18px;
+      background: #ffffff;
+      border: 2px solid var(--accent);
+      border-radius: 14px;
+      padding: 18px;
+    }
+
+    .big {
+      font-size: 34px;
+      font-weight: 800;
+      margin: 6px 0 2px;
+    }
+
+    .status {
+      font-weight: 700;
+      margin-top: 6px;
+    }
+
+    .good { color: var(--good); }
+    .warn { color: var(--warn); }
+    .bad { color: var(--bad); }
+
+    .steps {
+      margin-top: 16px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid #eef2f7;
+      padding: 7px 0;
+    }
+
+    .row span:first-child { color: var(--muted); }
+    .row span:last-child { font-weight: 700; text-align: right; }
+
+    .formula {
+      margin-top: 14px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 14px;
+      color: #374151;
+    }
+
+    button {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border: 0;
+      border-radius: 9px;
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    button:hover { filter: brightness(0.95); }
+  </style>
+
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2563eb" />
+</head>
+<body>
+  <div class="wrap">
+    <h1>Šķidruma balansa kalkulators</h1>
+    <div class="subtitle">Aprēķina, cik vēl jāizdzer, ņemot vērā svaru, ēdienā esošo ūdeni, urīna daudzumu un organisma ģenerēto ūdeni.</div>
+
+    <div class="grid">
+      <div class="card">
+        <label for="weight">Svars, kg</label>
+        <div class="hint">Piemēram: 80</div>
+        <input id="weight" type="number" inputmode="decimal" value="80" step="0.1" />
+      </div>
+
+      <div class="card">
+        <label for="mlPerKg">Nepieciešamais šķidrums uz 1 kg, ml</label>
+        <div class="hint">Piemēram: 30</div>
+        <input id="mlPerKg" type="number" inputmode="decimal" value="30" step="1" />
+      </div>
+
+      <div class="card">
+        <label for="foodWaterPercent">Cik % no ēdiena ir ūdens</label>
+        <div class="hint">Piemēram: 65</div>
+        <input id="foodWaterPercent" type="number" inputmode="decimal" value="65" step="1" />
+      </div>
+
+      <div class="card">
+        <label for="foodGrams">Apēstā ēdiena daudzums, g</label>
+        <div class="hint">Piemēram: 1500</div>
+        <input id="foodGrams" type="number" inputmode="decimal" value="1500" step="10" />
+      </div>
+
+      <div class="card">
+        <label for="urinePercent">Cik % no uzņemtā šķidruma aiziet urīnā</label>
+        <div class="hint">Piemēram: 70</div>
+        <input id="urinePercent" type="number" inputmode="decimal" value="70" step="1" />
+      </div>
+
+      <div class="card">
+        <label for="urineMl">Urīna daudzums, ml</label>
+        <div class="hint">Piemēram: 2000</div>
+        <input id="urineMl" type="number" inputmode="decimal" value="2000" step="10" />
+      </div>
+
+      <div class="card">
+        <label for="drunkMl">Izdzertais šķidrums, ml</label>
+        <div class="hint">Piemēram: 1000</div>
+        <input id="drunkMl" type="number" inputmode="decimal" value="1000" step="10" />
+      </div>
+
+      <div class="card">
+        <label for="metabolicMl">Ķermeņa ģenerētais ūdens diennaktī, ml</label>
+        <div class="hint">Piemēram: 250</div>
+        <input id="metabolicMl" type="number" inputmode="decimal" value="250" step="10" />
+      </div>
+    </div>
+
+    <div class="result">
+      <div>Cik vēl jāizdzer, lai būtu balanss:</div>
+      <div id="remaining" class="big">0 ml</div>
+      <div id="status" class="status"></div>
+
+      <div class="steps">
+        <div class="row"><span>Pamata vajadzība pēc svara</span><span id="baseNeed">0 ml</span></div>
+        <div class="row"><span>Vajadzīgā uzņemšana pēc urīna korekcijas</span><span id="correctedNeed">0 ml</span></div>
+        <div class="row"><span>Aprēķinā izmantotā vajadzīgā uzņemšana</span><span id="requiredNeed">0 ml</span></div>
+        <div class="row"><span>Ūdens no ēdiena</span><span id="foodWater">0 ml</span></div>
+        <div class="row"><span>Jau ieskaitāmais šķidrums kopā</span><span id="countedTotal">0 ml</span></div>
+        <div class="row"><span>Starpība</span><span id="difference">0 ml</span></div>
+      </div>
+
+      <div class="formula" id="formula"></div>
+      <button onclick="resetDefaults()">Atjaunot piemēra skaitļus</button>
+    </div>
+  </div>
+
+  <script>
+    const ids = [
+      'weight', 'mlPerKg', 'foodWaterPercent', 'foodGrams',
+      'urinePercent', 'urineMl', 'drunkMl', 'metabolicMl'
+    ];
+
+    function n(id) {
+      const value = parseFloat(document.getElementById(id).value);
+      return Number.isFinite(value) ? value : 0;
+    }
+
+    function fmt(x) {
+      return Math.round(x).toLocaleString('lv-LV') + ' ml';
+    }
+
+    function calculate() {
+      const weight = n('weight');
+      const mlPerKg = n('mlPerKg');
+      const foodWaterPercent = n('foodWaterPercent');
+      const foodGrams = n('foodGrams');
+      const urinePercent = n('urinePercent');
+      const urineMl = n('urineMl');
+      const drunkMl = n('drunkMl');
+      const metabolicMl = n('metabolicMl');
+
+      const baseNeed = weight * mlPerKg;
+      const urineRatio = urinePercent / 100;
+      const foodWater = foodGrams * foodWaterPercent / 100;
+
+      // Šeit korekcija tiek rēķināta pēc lietotāja loģikas:
+      // ja 70% aiziet urīnā un urīns ir 2000 ml,
+      // tad vajadzīgā kopējā uzņemšana = 2000 / 0.70 = 2857 ml.
+      const correctedNeed = urineRatio > 0 ? urineMl / urineRatio : 0;
+
+      // Minimums vienmēr paliek pamata vajadzība pēc svara.
+      // Ja urīna korekcija sanāk mazāka par pamata vajadzību, aprēķinā izmanto pamata vajadzību.
+      // Ja urīna korekcija sanāk lielāka, izmanto urīna korekciju.
+      const requiredNeed = Math.max(baseNeed, correctedNeed);
+
+      const countedTotal = drunkMl + metabolicMl + foodWater;
+      const remaining = requiredNeed - countedTotal;
+
+      document.getElementById('baseNeed').textContent = fmt(baseNeed);
+      document.getElementById('correctedNeed').textContent = fmt(correctedNeed);
+      document.getElementById('requiredNeed').textContent = fmt(requiredNeed);
+      document.getElementById('foodWater').textContent = fmt(foodWater);
+      document.getElementById('countedTotal').textContent = fmt(countedTotal);
+      document.getElementById('difference').textContent = fmt(remaining);
+
+      const remainingEl = document.getElementById('remaining');
+      const statusEl = document.getElementById('status');
+
+      if (remaining > 0) {
+        remainingEl.textContent = fmt(remaining);
+        statusEl.textContent = 'Vēl jāizdzer.';
+        statusEl.className = 'status warn';
+      } else {
+        remainingEl.textContent = '0 ml';
+        statusEl.textContent = 'Pēc šīs formulas balanss jau ir sasniegts vai pārsniegts par ' + fmt(Math.abs(remaining)) + '.';
+        statusEl.className = 'status good';
+      }
+
+      document.getElementById('formula').textContent =
+        'Formula: vajadzīgā uzņemšana pēc urīna korekcijas = urīns / (urīnā aiziet % / 100). ' +
+        'Aprēķinā izmantotā vajadzīgā uzņemšana = lielākais skaitlis no: pamata vajadzība pēc svara vai urīna korekcija. ' +
+        'Cik vēl jāizdzer = izmantotā vajadzīgā uzņemšana − (izdzertais + ķermeņa ģenerētais + ūdens no ēdiena).';
+    }
+
+    function resetDefaults() {
+      document.getElementById('weight').value = 80;
+      document.getElementById('mlPerKg').value = 30;
+      document.getElementById('foodWaterPercent').value = 65;
+      document.getElementById('foodGrams').value = 1500;
+      document.getElementById('urinePercent').value = 70;
+      document.getElementById('urineMl').value = 2000;
+      document.getElementById('drunkMl').value = 1000;
+      document.getElementById('metabolicMl').value = 250;
+      calculate();
+    }
+
+    ids.forEach(id => document.getElementById(id).addEventListener('input', calculate));
+    calculate();
+  </script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js');
+    });
+  }
+</script>
+</body>
+</html>
