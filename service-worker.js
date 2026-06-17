@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skidruma-balansa-v3';
+const CACHE_NAME = 'skidruma-balansa-v6';
 const FILES_TO_CACHE = [
   './',
   './index.html',

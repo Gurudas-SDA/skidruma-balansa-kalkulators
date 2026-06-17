@@ -335,7 +335,8 @@
         <div class="row"><span>Ūdens no ēdiena</span><span id="foodWater">0 ml</span></div>
         <div class="row"><span>Jau ieskaitāmais šķidrums kopā</span><span id="countedTotal">0 ml</span></div>
         <div class="row"><span>Starpība: cik vēl jāizdzer</span><span id="difference">0 ml</span></div>
-        <div class="row"><span>Dienas bilance pret vajadzīgo</span><span id="balanceLine">0 ml / 0%</span></div>
+        <div class="row"><span>Dienas bilance pret šīs dienas vajadzīgo</span><span id="balanceLine">0 ml / 0%</span></div>
+        <div class="row"><span>Dienas bilance pret pamata minimumu</span><span id="baseBalanceLine">0 ml / 0%</span></div>
       </div>
 
       <div class="formula" id="formula"></div>
@@ -344,7 +345,7 @@
 
     <div class="history-card">
       <h2 style="margin-top:0; font-size:22px;">Dienas saglabāšana un grafiks</h2>
-      <div class="hint">Saglabājas tikai dienas starpība pret vajadzīgo daudzumu: plusā vai mīnusā. Grafiks rāda šo starpību procentos pret attiecīgās dienas vajadzīgo daudzumu.</div>
+      <div class="hint">Saglabājas tikai dienas starpība: plusā vai mīnusā. Grafiks rāda dienas starpību procentos pret pamata minimumu pēc svara. Virs grafika redzams arī summārais +/− par grafikā apskatāmo periodu un šī summa procentos pret vienas dienas pamata minimumu.</div>
 
       <div class="save-row">
         <div>
@@ -356,6 +357,7 @@
       </div>
 
       <div id="saveStatus" class="history-summary"></div>
+      <div id="periodSummary" class="history-summary"></div>
       <canvas id="balanceChart" width="900" height="260"></canvas>
       <div id="historyTableWrap"></div>
     </div>
@@ -367,7 +369,7 @@
       'urinePercent', 'urineMl', 'drunkMl', 'metabolicMl'
     ];
 
-    const STORAGE_KEY = 'skidrumaBalansaDienasV3';
+    const STORAGE_KEY = 'skidrumaBalansaDienasV5';
     let latestResult = null;
 
     function n(id) {
@@ -412,9 +414,10 @@
       const remaining = requiredNeed - countedTotal;
       const balanceMl = countedTotal - requiredNeed;
       const balancePercent = requiredNeed > 0 ? (balanceMl / requiredNeed) * 100 : 0;
+      const baseBalancePercent = baseNeed > 0 ? (balanceMl / baseNeed) * 100 : 0;
 
       latestResult = {
-        baseNeed, correctedNeed, requiredNeed, foodWater, countedTotal, remaining, balanceMl, balancePercent
+        baseNeed, correctedNeed, requiredNeed, foodWater, countedTotal, remaining, balanceMl, balancePercent, baseBalancePercent
       };
 
       document.getElementById('baseNeed').textContent = fmt(baseNeed);
@@ -424,6 +427,7 @@
       document.getElementById('countedTotal').textContent = fmt(countedTotal);
       document.getElementById('difference').textContent = fmt(remaining);
       document.getElementById('balanceLine').textContent = (balanceMl >= 0 ? '+' : '') + fmtSigned(balanceMl) + ' / ' + (balancePercent >= 0 ? '+' : '') + balancePercent.toFixed(1).replace('.', ',') + '%';
+      document.getElementById('baseBalanceLine').textContent = (balanceMl >= 0 ? '+' : '') + fmtSigned(balanceMl) + ' / ' + (baseBalancePercent >= 0 ? '+' : '') + baseBalancePercent.toFixed(1).replace('.', ',') + '%';
 
       const remainingEl = document.getElementById('remaining');
       const statusEl = document.getElementById('status');
@@ -441,7 +445,8 @@
       document.getElementById('formula').textContent =
         'Formula: vajadzīgā uzņemšana pēc urīna korekcijas = urīns / (urīnā aiziet % / 100). ' +
         'Aprēķinā izmantotā vajadzīgā uzņemšana = lielākais skaitlis no: pamata vajadzība pēc svara vai urīna korekcija. ' +
-        'Cik vēl jāizdzer = izmantotā vajadzīgā uzņemšana − (izdzertais + ķermeņa ģenerētais + ūdens no ēdiena).';
+        'Cik vēl jāizdzer = izmantotā vajadzīgā uzņemšana − (izdzertais + ķermeņa ģenerētais + ūdens no ēdiena). ' +
+        'Grafikā % tiek rēķināti pret pamata minimumu pēc svara, nevis pret urīna korekcijas palielināto vajadzību.';
     }
 
     function addToField(targetId, addId) {
@@ -520,7 +525,9 @@
         date,
         balanceMl: Math.round(latestResult.balanceMl),
         requiredMl: Math.round(latestResult.requiredNeed),
-        percent: Math.round(latestResult.balancePercent * 10) / 10
+        requiredPercent: Math.round(latestResult.balancePercent * 10) / 10,
+        percent: Math.round(latestResult.baseBalancePercent * 10) / 10,
+        baseNeedMl: Math.round(latestResult.baseNeed)
       };
 
       const history = loadHistory().filter(item => item.date !== date);
@@ -530,7 +537,7 @@
 
       const sign = record.balanceMl >= 0 ? '+' : '';
       document.getElementById('saveStatus').textContent =
-        `Saglabāts ${date}: ${sign}${record.balanceMl.toLocaleString('lv-LV')} ml, ${sign}${record.percent.toFixed(1).replace('.', ',')}%.`;
+        `Saglabāts ${date}: ${sign}${record.balanceMl.toLocaleString('lv-LV')} ml, ${sign}${record.percent.toFixed(1).replace('.', ',')}% pret pamata minimumu.`;
       renderHistory();
     }
 
@@ -581,12 +588,32 @@
             <th>Datums</th>
             <th>+/− ml</th>
             <th>Vajadzība</th>
-            <th>+/− %</th>
+            <th>+/− % pret pamata minimumu</th>
             <th></th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>`;
+    }
+
+    function updatePeriodSummary(data) {
+      const el = document.getElementById('periodSummary');
+      if (!data.length) {
+        el.textContent = '';
+        return;
+      }
+
+      const totalBalanceMl = data.reduce((sum, item) => sum + (Number(item.balanceMl) || 0), 0);
+      // Summārais +/− ir uzkrājums pret vienas dienas pamata minimumu,
+      // nevis pret visu perioda dienu pamata minimumu summu.
+      const baseNeedForPercent = Number(data[data.length - 1]?.baseNeedMl) || 0;
+      const totalPercent = baseNeedForPercent > 0 ? (totalBalanceMl / baseNeedForPercent) * 100 : 0;
+      const signMl = totalBalanceMl >= 0 ? '+' : '';
+      const signPct = totalPercent >= 0 ? '+' : '';
+      const fromDate = data[0].date;
+      const toDate = data[data.length - 1].date;
+
+      el.textContent = `Apskatāmais periods: ${fromDate} līdz ${toDate}. Summāri: ${signMl}${Math.round(totalBalanceMl).toLocaleString('lv-LV')} ml / ${signPct}${totalPercent.toFixed(1).replace('.', ',')}% pret vienas dienas pamata minimumu.`;
     }
 
     function renderChart(history) {
@@ -599,12 +626,14 @@
       ctx.fillStyle = '#6b7280';
 
       if (!history.length) {
+        document.getElementById('periodSummary').textContent = '';
         ctx.fillText('Grafiks parādīsies pēc pirmās dienas saglabāšanas.', 18, 36);
         return;
       }
 
       const data = history.slice(-30);
-      const maxAbs = Math.max(10, ...data.map(item => Math.abs(Number(item.percent) || 0)));
+      updatePeriodSummary(data);
+      const maxAbs = Math.max(10, ...data.map(item => Math.abs(Number(item.percent) || 0))); // percent = pret pamata minimumu
       const top = 22;
       const bottom = 42;
       const left = 44;
